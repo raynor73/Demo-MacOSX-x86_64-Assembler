@@ -51,10 +51,10 @@ _main:
     movl $0xff0a1f65, %edi
     callq fillScreen
 
-    movl $0xffffffff, %eax
-    movq bufferAddress(%rip), %rbx
-    addq $1574912, %rbx
-    movl %eax, (%rbx)
+    movl $512, %edi
+    movl $384, %esi
+    movl $0xffffffff, %edx
+    callq drawPoint
 
     leaq tgaHeader(%rip), %rdi
     movq $TGA_HEADER_LENGTH, %rsi
@@ -82,7 +82,7 @@ fileClosedOk:
     movl $0, %edi
     callq _exit
 
-fillScreen:
+fillScreen: # edi - color
     enter $4, $0
     andq $0xfffffffffffffff0, %rsp
 
@@ -95,14 +95,27 @@ fillScreen:
     leave
     retq
 
-drawPoint:
+drawPoint: # edi - x, esi - y, edx - color
     enter $0, $0
-    andq $0xfffffffffffffff0, %rsp
 
-    movl $0xffffffff, %eax
+    cmpw $OUTPUT_IMAGE_WIDTH, %di
+    jge outOfScreen
+
+    cmpw $OUTPUT_IMAGE_HEIGHT, %si
+    jge outOfScreen
+
+    movl %edx, %r9d
+
+    movl %esi, %eax
+    movl $OUTPUT_IMAGE_WIDTH, %r8d
+    mull %r8d
+    addl %edi, %eax
+    shll $2, %eax
+
     movq bufferAddress(%rip), %rbx
-    addq $1574912, %rbx
-    movl %eax, (%rbx)
+    addq %rax, %rbx
+    movl %r9d, (%rbx)
 
+outOfScreen:
     leave
     retq
