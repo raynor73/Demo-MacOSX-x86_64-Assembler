@@ -2,9 +2,13 @@
 
 filename: .asciz "ResultImage.tga"
 fileMode: .asciz "w+"
-errorClosingFileMsg: .asciz "Error closing file\n"
+errorClosingFileMsg: .asciz "Error closing file.\n"
+successMsg: .asciz "Result file %s was successfully written.\n"
 streamAddress: .quad 0
 bufferAddress: .quad 0
+pi: .double 3.1415926535
+
+angleMsg: .asciz "angle: %f\n"
 
 OUTPUT_IMAGE_WIDTH = 1024
 OUTPUT_IMAGE_HEIGHT = 768
@@ -48,13 +52,7 @@ _main:
     callq _malloc
     movq %rax, bufferAddress(%rip)
 
-    movl $0xff0a1f65, %edi
-    callq fillScreen
-
-    movl $512, %edi
-    movl $384, %esi
-    movl $0xffffffff, %edx
-    callq drawPoint
+    callq drawCircle
 
     leaq tgaHeader(%rip), %rdi
     movq $TGA_HEADER_LENGTH, %rsi
@@ -67,6 +65,10 @@ _main:
     movq $BUFFER_SIZE, %rdx
     movq streamAddress(%rip), %rcx
     callq _fwrite
+
+    leaq successMsg(%rip), %rdi
+    leaq filename(%rip), %rsi
+    callq _printf
 
     movq bufferAddress(%rip), %rdi
     callq _free
@@ -82,13 +84,58 @@ fileClosedOk:
     movl $0, %edi
     callq _exit
 
+drawCircle:
+    enter $16, $0
+    andq $0xfffffffffffffff0, %rsp
+
+    movl $0xff0a1f65, %edi
+    callq fillScreen
+
+    movq $180, -16(%rbp)
+    #movq 
+
+    xor %r12, %r12
+loop:
+    finit
+
+    movq %r12, -8(%rbp)
+    
+    fildq -8(%rbp)
+    fldpi
+    fmul %st(1), %st
+    fildq -16(%rbp)
+    fxch
+    fdiv %st(1), %st
+    fstpl -8(%rbp)
+    
+    movq $1, %rax
+    leaq angleMsg(%rip), %rdi
+    movq -8(%rbp), %xmm0
+    callq _printf
+    
+    incq %r12
+    cmp $360, %r12
+    jnz loop
+
+    #fldl argument(%rip)
+    #fsin
+    #fstl sinValue(%rip)
+
+    movl $512, %edi
+    movl $384, %esi
+    movl $0xffffffff, %edx
+    callq drawPoint
+
+    leave
+    retq
+
 fillScreen: # edi - color
     enter $4, $0
     andq $0xfffffffffffffff0, %rsp
 
-    movl %edi, (%rbp)
+    movl %edi, -8(%rbp)
     movq bufferAddress(%rip), %rdi
-    movq %rbp, %rsi
+    leaq -8(%rbp), %rsi
     movq $BUFFER_SIZE, %rdx
     callq _memset_pattern4
 
