@@ -85,14 +85,17 @@ fileClosedOk:
     callq _exit
 
 drawCircle:
-    enter $16, $0
+    enter $56, $0
     andq $0xfffffffffffffff0, %rsp
 
     movl $0xff0a1f65, %edi
     callq fillScreen
 
     movq $180, -16(%rbp)
-    #movq 
+    
+    movq $512, -24(%rbp) # center X
+    movq $384, -32(%rbp) # center Y
+    movq $100, -40(%rbp) # radius
 
     xor %r12, %r12
 loop:
@@ -106,25 +109,32 @@ loop:
     fildq -16(%rbp)
     fxch
     fdiv %st(1), %st
-    fstpl -8(%rbp)
     
-    movq $1, %rax
-    leaq angleMsg(%rip), %rdi
-    movq -8(%rbp), %xmm0
-    callq _printf
+    fstl -8(%rbp)
     
+    fsin
+    fildq -40(%rbp)
+    fmul %st(1), %st
+    fildq -24(%rbp)
+    fadd %st(1), %st
+    fistpq -48(%rbp)
+
+    fldl -8(%rbp)
+    fcos
+    fildq -40(%rbp)
+    fmul %st(1), %st
+    fildq -32(%rbp)
+    fadd %st(1), %st
+    fistpq -56(%rbp)
+
+    movl -48(%rbp), %edi
+    movl -56(%rbp), %esi
+    movl $0xffffffff, %edx
+    callq drawPoint
+
     incq %r12
     cmp $360, %r12
     jnz loop
-
-    #fldl argument(%rip)
-    #fsin
-    #fstl sinValue(%rip)
-
-    movl $512, %edi
-    movl $384, %esi
-    movl $0xffffffff, %edx
-    callq drawPoint
 
     leave
     retq
